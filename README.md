@@ -1,20 +1,74 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# AMR Charging Hub Simulation
 
-# Run and deploy your AI Studio app
+A full-stack application for simulating AMR charging hub operations, managing scenarios, and generating reports.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1wGAG_z2E2nBrdkCP6c6eaBtj9f8iz_nm
+- **Simulation**: Run simulations with two parameters (param1 + param2).
+- **Scenario Management**: Create, read, update, and delete scenarios.
+- **Report Generation**: Generate PDF reports for scenarios.
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- **Backend**: Node.js, Express, SQLite, PDFKit
+- **Frontend**: React, TypeScript, Axios
 
+## Setup Instructions
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Clone the repository**:
+   ```
+   git clone <repository-url>
+   cd amr-charging-hub
+   ```
+
+2. **Install backend dependencies**:
+   ```
+   cd backend
+   npm install
+   ```
+
+3. **Install frontend dependencies**:
+   ```
+   cd ..
+   npm install
+   ```
+
+4. **Start the backend server**:
+   ```
+   cd backend
+   npm run dev
+   ```
+   The backend will run on http://localhost:5000.
+
+5. **Start the frontend development server**:
+   ```
+   npm run dev
+   ```
+   The frontend will run on http://localhost:5173 (or similar).
+
+## Testing Instructions
+
+1. **Simulation**:
+   - Enter values for Param 1 and Param 2.
+   - Click "Run Simulation" to see the result (sum of the two parameters).
+
+2. **Scenarios**:
+   - Add a new scenario by entering a name and parameters (JSON format).
+   - View the list of scenarios.
+   - Edit or delete existing scenarios.
+
+3. **Report Generation**:
+   - Click "Generate Report" next to a scenario to download a PDF report.
+
+## API Endpoints
+
+- `POST /simulate`: Run a simulation with param1 and param2.
+- `GET /scenarios`: Get all scenarios.
+- `POST /scenarios`: Create a new scenario.
+- `PUT /scenarios/:id`: Update a scenario.
+- `DELETE /scenarios/:id`: Delete a scenario.
+- `POST /report/generate`: Generate a PDF report for a scenario.
+
+## Database
+
+The application uses SQLite for data persistence. The database file is created automatically on first run.

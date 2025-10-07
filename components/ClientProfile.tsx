@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Client, VehicleType, Transaction } from '../types';
-import { ArrowLeftIcon, PlusIcon, ReceiptIcon, UserIcon, PencilIcon } from './Icons';
+import { ArrowLeftIcon, PlusIcon, ReceiptIcon, UserIcon, PencilIcon, TrashIcon } from './Icons';
 import EditClientModal from './EditClientModal';
 import EditVehicleTypeModal from './EditVehicleTypeModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
+import EditTransactionModal from './EditTransactionModal';
+import { api } from '../api';
 
 interface ClientProfileProps {
   client: Client;
@@ -66,21 +69,77 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isEditVehicleTypeModalOpen, setIsEditVehicleTypeModalOpen] = useState(false);
     const [vehicleTypeToEdit, setVehicleTypeToEdit] = useState<VehicleType | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+    const [isEditTransactionModalOpen, setIsEditTransactionModalOpen] = useState(false);
+    const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+    const [sortKey, setSortKey] = useState<'timestamp' | 'payableAmount' | 'cashReceived' | 'due'>('timestamp');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     const totalDue = useMemo(() => {
-        return client.transactions.reduce((acc, tx) => acc + Math.max(0, tx.due), 0);
+        const netDue = client.transactions.reduce((acc, tx) => acc + tx.due, 0);
+        return Math.max(0, netDue);
     }, [client.transactions]);
 
-    const handleAddTransaction = (newTxData: Omit<Transaction, 'id'>) => {
-        const newTransaction: Transaction = {
-            id: `tx-${new Date().getTime()}`,
-            ...newTxData
-        };
-        const updatedClient: Client = {
-            ...client,
-            transactions: [newTransaction, ...client.transactions],
-        };
-        onUpdateClient(updatedClient);
+    const sortedTransactions = useMemo(() => {
+        let sorted = [...client.transactions];
+        sorted = sorted.sort((a, b) => {
+            let aVal, bVal;
+            if (sortKey === 'timestamp') {
+                aVal = new Date(a.timestamp).getTime();
+                bVal = new Date(b.timestamp).getTime();
+            } else {
+                aVal = a[sortKey];
+                bVal = b[sortKey];
+            }
+            if (sortOrder === 'asc') {
+                return aVal - bVal;
+            } else {
+                return bVal - aVal;
+            }
+        });
+        return sorted;
+    }, [client.transactions, sortKey, sortOrder]);
+
+    const handleAddTransaction = async (newTxData: Omit<Transaction, 'id'>) => {
+        try {
+            const updatedClient = await api.addTransaction(client.id, { timestamp: newTxData.timestamp, cashReceived: newTxData.cashReceived });
+            onUpdateClient(updatedClient);
+        } catch (error) {
+            console.error('Failed to add transaction:', error);
+        }
+    };
+
+    const handleUpdateTransaction = async (txId: string, updates: Partial<Transaction>) => {
+        try {
+            const updatedClient = await api.updateTransaction(client.id, txId, updates);
+            onUpdateClient(updatedClient);
+        } catch (error) {
+            console.error('Failed to update transaction:', error);
+        }
+    };
+
+    const handleDeleteTransaction = (txId: string) => {
+        setTransactionToDelete(txId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDeleteTransaction = async () => {
+        if (!transactionToDelete) return;
+        try {
+            const updatedClient = await api.deleteTransaction(client.id, transactionToDelete);
+            onUpdateClient(updatedClient);
+        } catch (error) {
+            console.error('Failed to delete transaction:', error);
+        }
+        setTransactionToDelete(null);
+    };
+
+    const handleEditTransactionUpdate = (updates: Partial<Transaction>) => {
+        if (!transactionToEdit) return;
+        handleUpdateTransaction(transactionToEdit.id, updates);
+        setIsEditTransactionModalOpen(false);
+        setTransactionToEdit(null);
     };
     
     const primaryVehicle = useMemo(() => {
@@ -142,6 +201,26 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
 
                     <div className="lg:col-span-2 bg-white dark:bg-slate-800 shadow-md rounded-lg p-6">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><ReceiptIcon /> Transaction History</h3>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            <label className="font-medium text-slate-700 dark:text-slate-300">Sort by:</label>
+                            <select
+                                value={sortKey}
+                                onChange={e => setSortKey(e.target.value as 'timestamp' | 'payableAmount' | 'cashReceived' | 'due')}
+                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                            >
+                                <option value="timestamp">Date</option>
+                                <option value="payableAmount">Payable Amount</option>
+                                <option value="cashReceived">Cash Received</option>
+                                <option value="due">Due</option>
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))}
+                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700"
+                            >
+                                {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+                            </button>
+                        </div>
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                               <thead className="bg-slate-50 dark:bg-slate-700/50">
@@ -150,10 +229,11 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Payable</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Cash</th>
                                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Due</th>
+                                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Actions</th>
                                   </tr>
                               </thead>
                               <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                                  {client.transactions.length > 0 ? client.transactions.map(tx => (
+                                  {sortedTransactions.length > 0 ? sortedTransactions.map(tx => (
                                       <tr key={tx.id}>
                                           <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                                               {new Date(tx.timestamp).toLocaleString()}
@@ -167,10 +247,17 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                                           <td className={`px-4 py-4 whitespace-nowrap text-sm font-bold ${tx.due > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500'}`}>
                                               ৳{tx.due.toLocaleString()}
                                           </td>
+                                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                                              <button onClick={() => {
+                                                  setTransactionToEdit(tx);
+                                                  setIsEditTransactionModalOpen(true);
+                                              }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-2">Edit</button>
+                                              <button onClick={() => handleDeleteTransaction(tx.id)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"><TrashIcon /></button>
+                                          </td>
                                       </tr>
                                   )) : (
                                     <tr>
-                                      <td colSpan={4} className="text-center py-10 text-slate-500 dark:text-slate-400">No transactions yet.</td>
+                                      <td colSpan={5} className="text-center py-10 text-slate-500 dark:text-slate-400">No transactions yet.</td>
                                     </tr>
                                   )}
                               </tbody>
@@ -201,6 +288,22 @@ const ClientProfile: React.FC<ClientProfileProps> = ({ client, vehicleTypes, onB
                         });
                         setIsEditVehicleTypeModalOpen(false);
                     }}
+                />
+            )}
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDeleteTransaction}
+                title="Delete Transaction"
+                message="Are you sure you want to delete this transaction? This action cannot be undone."
+            />
+            {transactionToEdit && (
+                <EditTransactionModal
+                    isOpen={isEditTransactionModalOpen}
+                    onClose={() => setIsEditTransactionModalOpen(false)}
+                    onUpdate={handleEditTransactionUpdate}
+                    transaction={transactionToEdit}
+                    vehicleTypes={vehicleTypes}
                 />
             )}
         </>

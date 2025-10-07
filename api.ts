@@ -1,7 +1,7 @@
 
 /// <reference types="vite/client" />
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000/api' : '/api';
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5002/api' : '/api';
 
 
 const getAuthHeaders = () => {
@@ -49,11 +49,11 @@ export const api = {
     return response.json();
   },
 
-  updateCredentials: async (currentUsername: string, currentPassword: string, newUsername: string, newPassword: string): Promise<{ message: string }> => {
+  updateCredentials: async (currentPassword: string, newUsername: string, newPassword: string): Promise<{ message: string }> => {
     const response = await fetch(`${API_BASE_URL}/auth/update`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-      body: JSON.stringify({ currentUsername, currentPassword, newUsername, newPassword }),
+      body: JSON.stringify({ currentPassword, newUsername, newPassword }),
     });
     if (!response.ok) throw new Error('Update failed');
     return response.json();
@@ -64,7 +64,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/clients`, {
       headers: getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch clients');
+    if (!response.ok) throw new Error(`Failed to fetch clients: ${response.status} ${response.statusText}`);
     return response.json();
   },
 
@@ -104,12 +104,41 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete client');
   },
 
+  addTransaction: async (clientId: string, transaction: { timestamp: string; cashReceived: number }): Promise<Client> => {
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(transaction),
+    });
+    if (!response.ok) throw new Error('Failed to add transaction');
+    return response.json();
+  },
+
+  updateTransaction: async (clientId: string, txId: string, transaction: Partial<Transaction>): Promise<Client> => {
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/transactions/${txId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(transaction),
+    });
+    if (!response.ok) throw new Error('Failed to update transaction');
+    return response.json();
+  },
+
+  deleteTransaction: async (clientId: string, txId: string): Promise<Client> => {
+    const response = await fetch(`${API_BASE_URL}/clients/${clientId}/transactions/${txId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete transaction');
+    return response.json();
+  },
+
   // Vehicle Types
   getVehicleTypes: async (): Promise<VehicleType[]> => {
     const response = await fetch(`${API_BASE_URL}/vehicleTypes`, {
       headers: getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to fetch vehicle types');
+    if (!response.ok) throw new Error(`Failed to fetch vehicle types: ${response.status} ${response.statusText}`);
     return response.json();
   },
 

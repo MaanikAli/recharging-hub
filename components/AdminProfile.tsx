@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
+import { api } from '../api';
 
 const AdminProfile: React.FC = () => {
-  const [currentUsername, setCurrentUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -16,23 +16,11 @@ const AdminProfile: React.FC = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/auth/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentUsername, currentPassword, newUsername, newPassword }),
-      });
-      if (response.ok) {
-        setMessage('Credentials updated successfully');
-        setTimeout(() => logout(), 2000); // Logout after 2 seconds to show message
-      } else {
-        setMessage('Update failed');
-      }
-    } catch (error) {
-      setMessage('Update failed');
+      await api.updateCredentials(currentPassword, newUsername, newPassword);
+      setMessage('Credentials updated successfully');
+      setTimeout(() => logout(), 2000); // Logout after 2 seconds to show message
+    } catch (error: any) {
+      setMessage(error.message || 'Update failed');
     }
   };
 
@@ -42,16 +30,6 @@ const AdminProfile: React.FC = () => {
         <button onClick={handleBack} className="mb-4 text-blue-500 hover:underline">Back</button>
         <h2 className="text-2xl font-bold mb-6">Admin Profile</h2>
         <form onSubmit={handleUpdate}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Current Username</label>
-            <input
-              type="text"
-              value={currentUsername}
-              onChange={(e) => setCurrentUsername(e.target.value)}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Current Password</label>
             <input

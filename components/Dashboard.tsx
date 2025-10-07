@@ -55,8 +55,7 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
   
   const totalDueAllClients = useMemo(() => {
       return clients.reduce((total, client) => {
-          const clientDue = client.transactions.reduce((sum, tx) => sum + Math.max(0, tx.due), 0);
-          return total + clientDue;
+          return total + client.transactions.reduce((sum, tx) => sum + tx.due, 0);
       }, 0);
   }, [clients]);
 
@@ -101,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ clients, vehicleTypes, onSelectCl
             </div>
              <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md">
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Outstanding Due</h3>
-                <p className="text-3xl font-bold text-red-500 dark:text-red-400 mt-1">৳{totalDueAllClients.toLocaleString()}</p>
+                <p className={`text-3xl font-bold mt-1 ${totalDueAllClients >= 0 ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>৳{totalDueAllClients.toLocaleString()}</p>
             </div>
              <div className="bg-white dark:bg-slate-800 p-5 rounded-lg shadow-md">
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Vehicle Types</h3>

@@ -110,7 +110,7 @@ const AppContent: React.FC = () => {
         }
         setLoadError(errorMsg);
         // If error is 401 Unauthorized, log out and show login page
-        if (error instanceof Error && error.message && error.message.toLowerCase().includes('unauthorized')) {
+        if (error instanceof Error && error.message && error.message.includes('401')) {
           logout();
           setIsDataLoaded(false);
         }
@@ -142,7 +142,7 @@ const AppContent: React.FC = () => {
       setClients(prevClients => prevClients.filter(c => c.id !== optimisticClient.id));
     }
   };
-  
+
   // Optimistic UI update for editing client
   const updateClient = async (updatedClient: Client) => {
     setClients(prevClients =>
