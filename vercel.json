@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "functions": {
     "server.js": {
-      "runtime": "nodejs"
+      "runtime": "nodejs18.x"
     }
   },
   "routes": [
